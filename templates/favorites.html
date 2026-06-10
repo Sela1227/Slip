@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon, avatar %}
+{% set active = "favorites" %}
+{% block title %}我的最愛｜{{ app_name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <span class="badge">{{ icon('check', 22) }}</span>
+    <h1>我的最愛</h1>
+  </div>
+
+  {% if items %}
+    {% for it in items %}
+      <div class="card msg">
+        <div class="msg-head">
+          {{ avatar(it.sender, it.sender in avset, 28) }}
+          <span class="msg-from">{{ it.from }}</span>
+          <span class="msg-time">{{ localtime(it.at).strftime("%m/%d %H:%M") }}</span>
+        </div>
+        {% if it.title %}<div class="bubble-title" style="color:var(--primary-d)">{{ it.title }}</div>{% endif %}
+        {% if it.body %}<div class="msg-body clamp" id="fav-{{ it.fid }}">{{ it.body }}</div>
+          <button type="button" class="more-btn linklike" data-for="fav-{{ it.fid }}" style="display:none">展開</button>{% endif %}
+        {% for a in it.attachments %}
+          {% if is_image(a.name) %}
+            <div class="att-img">
+              <a href="/attachment/{{ a.id }}" target="_blank"><img src="/attachment/{{ a.id }}" alt="{{ a.name }}" onerror="imgGone(this)"></a>
+              <a class="att-img-dl" href="/attachment/{{ a.id }}" download="{{ a.name }}">{{ icon('download', 13) }}{{ human_size(a.size) }}</a>
+            </div>
+          {% else %}
+            <div class="att">
+              <div class="att-file">
+                <span class="fic">{{ icon('file', 18) }}</span>
+                <span><div class="nm">{{ a.name }}</div><div class="sz">{{ human_size(a.size) }}</div></span>
+                <a class="btn soft sm dl" href="/attachment/{{ a.id }}" download="{{ a.name }}">{{ icon('download', 14) }}下載</a>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+        <div class="msg-actions">
+          <a class="btn ghost sm" href="/inbox/{{ it.other }}">前往對話</a>
+          <details class="rowmenu">
+            <summary>{{ icon('edit', 14) }}更多</summary>
+            <div class="rowmenu-body" style="flex-direction:column;align-items:stretch">
+              <form method="post" action="/favorite/{{ it.fid }}/title" class="mini">
+                <input name="title" value="{{ it.title or '' }}" placeholder="自訂標題" maxlength="200">
+                <button type="submit" class="btn soft sm">存標題</button>
+              </form>
+              <form class="inline-form" method="post" action="/favorite/{{ it.fid }}/remove">
+                <button class="btn ghost sm" type="submit">{{ icon('x', 15) }}移除收藏</button>
+              </form>
+            </div>
+          </details>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty"><span class="eic">{{ icon('check', 26) }}</span>還沒有收藏。在對話裡點訊息的「☆ 收藏」就會出現在這。</div>
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    function imgGone(img) { var w = img.closest(".att-img"); if (w) w.outerHTML = '<div class="att-gone">圖片已遺失（伺服器未設定持久儲存）</div>'; }
+    document.querySelectorAll(".msg-body.clamp").forEach(function (el) {
+      var btn = el.parentNode.querySelector(".more-btn[data-for='" + el.id + "']");
+      if (!btn) return;
+      if (el.scrollHeight - el.clientHeight > 2) {
+        btn.style.display = "";
+        btn.addEventListener("click", function () {
+          var open = el.classList.toggle("clamp") === false;
+          btn.textContent = open ? "收合" : "展開";
+        });
+      } else { el.classList.remove("clamp"); }
+    });
+  </script>
+{% endblock %}

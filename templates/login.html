@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登入｜{{ app_name }}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon/sela.svg">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="/static/favicon/site.webmanifest">
+  <meta name="theme-color" content="#304073">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Slip">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</head>
+<body>
+  <div class="auth">
+    <div class="auth-card">
+      <div class="auth-brand"><img src="/static/favicon/sela.svg" alt="SELA">{{ app_name }}<span class="ver">{{ app_version }}</span></div>
+      <div class="auth-sub">請輸入帳號密碼登入</div>
+
+      {% if flash %}<div class="flash {{ flash.kind }}">{{ flash.message }}</div>{% endif %}
+
+      <form method="post" action="/login" autocomplete="on">
+        <label>帳號</label>
+        <input name="username" value="{{ remember_user or '' }}" autocomplete="username" {{ '' if remember_user else 'autofocus' }} required>
+        <label>密碼</label>
+        <input name="password" type="password" autocomplete="off" {{ 'autofocus' if remember_user else '' }} required>
+        <label class="check"><input type="checkbox" name="remember" value="1" {{ 'checked' if remember_user else '' }}><span>記住帳號（下次自動帶入，不含密碼）</span></label>
+        <div class="btn-row"><button class="btn" type="submit" style="width:100%">登入</button></div>
+      </form>
+
+      <div class="note" style="margin-top:20px">首次登入：輸入管理者給你的帳號後，系統會引導你設定自己的密碼。<br>忘記密碼請洽管理者重設。</div>
+      <div class="foot">Made by SELA　·　{{ app_version }}</div>
+    </div>
+  </div>
+</body>
+</html>

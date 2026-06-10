@@ -1,0 +1,14 @@
+# 一律用 == 精確鎖版本：雲端自動 rebuild 不會拉新版破壞 API（坑 #46）
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+jinja2==3.1.5
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.10
+python-multipart==0.0.20
+itsdangerous==2.2.0
+bcrypt==4.2.1
+tzdata==2026.2
+Pillow==12.1.1
+qrcode==8.2
+pypdf==5.9.0
+cryptography==44.0.0

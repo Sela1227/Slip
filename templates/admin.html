@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon, avatar %}
+{% set active = "admin" %}
+{% block title %}帳號管理｜{{ app_name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <span class="badge">{{ icon('shield', 22) }}</span>
+    <h1>帳號管理</h1>
+  </div>
+
+  <div class="card">
+    <details class="editbox" style="margin-top:0"{% if cur_announcement %} open{% endif %}>
+      <summary>{{ icon('inbox', 16) }}公告{% if cur_announcement %}（發布中）{% endif %}</summary>
+      <div class="editbox-body">
+        <p class="card-sub" style="margin-top:0">張貼後，所有使用者在每個頁面最上方都會看到。內容留空送出即清除公告。</p>
+        <form method="post" action="/admin/announce">
+          <textarea name="text" rows="3" maxlength="1000" placeholder="輸入公告內容…">{{ cur_announcement }}</textarea>
+          <div class="btn-row" style="margin-top:10px">
+            <button class="btn" type="submit">{{ icon('check', 16) }}{{ '更新公告' if cur_announcement else '發布公告' }}</button>
+            {% if cur_announcement %}<button class="btn ghost" type="submit" onclick="this.closest('form').querySelector('textarea').value='';">{{ icon('x', 16) }}清除公告</button>{% endif %}
+          </div>
+        </form>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <details class="editbox" style="margin-top:0">
+      <summary>{{ icon('plus', 16) }}新增帳號</summary>
+      <div class="editbox-body">
+        <form method="post" action="/admin/add" autocomplete="off">
+          <input name="username" placeholder="例如：nurse_wang" autocomplete="off" required>
+          <div class="btn-row"><button class="btn" type="submit">{{ icon('plus', 16) }}建立帳號</button></div>
+        </form>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <label>邀請別人自己註冊</label>
+    <form method="post" action="/admin/signup">
+      <div class="btn-row"><button class="btn soft" type="submit">{{ icon('plus', 16) }}產生一次性註冊連結</button></div>
+    </form>
+    {% for s in signups %}
+      <div class="link-box">
+        <code id="lk-{{ s.id }}">{{ s.link }}</code>
+        <button type="button" class="btn ghost sm" onclick="copyLink('lk-{{ s.id }}', this)">{{ icon('copy', 14) }}複製</button>
+        <form class="inline-form" method="post" action="/admin/signup/{{ s.id }}/revoke">
+          <button type="submit" class="btn ghost sm">撤銷</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <details class="editbox" style="margin-top:0">
+      <summary>{{ icon('users', 16) }}協助互加好友</summary>
+      <div class="editbox-body">
+        <p class="card-sub" style="margin-top:0">直接讓兩個帳號成為好友（含你自己），不需對方按同意。</p>
+        <form method="post" action="/admin/befriend" class="befriend-form">
+          <select name="user_a" required>
+            <option value="">選擇帳號 A…</option>
+            {% for u in users if u.is_active %}<option value="{{ u.username }}">{{ u.username }}{% if u.is_admin %}（管理者）{% endif %}</option>{% endfor %}
+          </select>
+          <span class="befriend-amp">＋</span>
+          <select name="user_b" required>
+            <option value="">選擇帳號 B…</option>
+            {% for u in users if u.is_active %}<option value="{{ u.username }}">{{ u.username }}{% if u.is_admin %}（管理者）{% endif %}</option>{% endfor %}
+          </select>
+          <button class="btn" type="submit">{{ icon('check', 16) }}互加好友</button>
+        </form>
+      </div>
+    </details>
+  </div>
+
+  <div class="acct-list">
+    {% for u in users %}
+      <div class="acct">
+        <div class="acct-top">
+          {{ avatar(u.username, u.avatar_path or u.avatar_preset is not none, 40) }}
+          <div class="acct-id">
+            <div class="acct-name">{{ u.username }}{% if u.is_admin %}<span class="tag admin">管理者</span>{% endif %}</div>
+            <div class="acct-meta">
+              {% if not u.is_active %}<span class="tag off">已停用</span>
+              {% elif not u.password_hash %}<span class="tag pending">待設定密碼</span>
+              {% else %}<span class="tag active">使用中</span>{% endif %}
+              {% if not u.is_admin %}<span class="tag">{{ {1:'銀',2:'金',3:'白金'}.get(u.level or 1, '銀') }}</span>{% endif %}
+              <span>本月上傳 {{ human_size(uploads.get(u.username, 0)) }}</span>
+              <span class="acct-fid">ID {{ acct_ids.get(u.username) }}</span>
+              {% if u.username in priv_users %}<span class="tag private">私密 1天</span>{% endif %}
+              <span class="acct-login">最後登入 {{ last_logins.get(u.username, '—') }}</span>
+            </div>
+          </div>
+        </div>
+        {% if u.username != user.username %}
+          <details class="rowmenu" style="margin-top:12px">
+            <summary>{{ icon('shield', 14) }}管理</summary>
+            <div class="rowmenu-body">
+              <span class="tier-set">等級：
+                {% for lv, nm in [(1,'銀'),(2,'金'),(3,'白金')] %}
+                  {% if (u.level or 1) == lv %}
+                    <span class="tier-cur">{{ nm }}（目前）</span>
+                  {% else %}
+                    <form class="inline-form" method="post" action="/admin/user/{{ u.id }}/level">
+                      <input type="hidden" name="level" value="{{ lv }}">
+                      <button class="btn ghost sm" type="submit">設為{{ nm }}</button>
+                    </form>
+                  {% endif %}
+                {% endfor %}
+              </span>
+              <form class="inline-form" method="post" action="/admin/user/{{ u.id }}/reset"
+                    onsubmit="return confirm('重設「{{ u.username }}」的密碼？本人需重新登入設定。');">
+                <button class="btn ghost sm" type="submit">重設密碼</button>
+              </form>
+              <form class="inline-form" method="post" action="/admin/user/{{ u.id }}/private">
+                <button class="btn ghost sm" type="submit">{{ '關閉私密對話' if u.username in priv_users else '設為私密對話(1天)' }}</button>
+              </form>
+              <form class="inline-form" method="post" action="/admin/user/{{ u.id }}/toggle">
+                <button class="btn ghost sm" type="submit">{{ '啟用' if not u.is_active else '停用' }}</button>
+              </form>
+              <form class="inline-form" method="post" action="/admin/user/{{ u.id }}/delete"
+                    onsubmit="return confirm('刪除帳號「{{ u.username }}」？會一併刪掉相關訊息與好友關係，無法復原。');">
+                <button class="btn danger sm" type="submit">{{ icon('trash', 15) }}刪除</button>
+              </form>
+            </div>
+          </details>
+        {% else %}
+          <div class="acct-self">（你自己）</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    function copyLink(id, btn) {
+      var text = document.getElementById(id).innerText;
+      var done = function () { var o = btn.innerHTML; btn.textContent = "已複製"; setTimeout(function(){ btn.innerHTML = o; }, 1500); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, function(){ fb(text, done); });
+      } else { fb(text, done); }
+    }
+    function fb(text, done) {
+      var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  </script>
+{% endblock %}

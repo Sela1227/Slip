@@ -50,3 +50,10 @@ node_modules/
 
 # Flet
 .flet/
+
+# 診間傳遞 專案特定
+local.db
+config.json
+
+# 附件上傳（本機）
+uploads/

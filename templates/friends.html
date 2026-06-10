@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon, avatar %}
+{% set active = "friends" %}
+{% block title %}好友｜{{ app_name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <span class="badge">{{ icon('users', 22) }}</span>
+    <h1>好友</h1>
+  </div>
+
+  {# 我的 ID（給對方加你用）#}
+  <div class="card">
+    <label style="margin-top:0">我的好友 ID</label>
+    <div class="idbox">
+      <span class="idval" id="myid">{{ my_id }}</span>
+      <button type="button" class="btn soft sm" onclick="copyId(this)">{{ icon('copy', 15) }}複製</button>
+    </div>
+    <details class="editbox" style="margin-top:12px">
+      <summary>{{ icon('image', 16) }}顯示我的 QR（讓對方掃）</summary>
+      <div class="editbox-body" style="text-align:center">
+        <img class="qr-img" src="/friend/qr" alt="我的好友 QR" width="200" height="200">
+        <div class="note" style="margin-top:8px;justify-content:center">{{ icon('shield', 16) }}<span>對方用相機或下方「掃描」對準即可加你。</span></div>
+      </div>
+    </details>
+
+    {# 用 ID / 掃 QR 加好友 #}
+    <form method="post" action="/friend/request" autocomplete="off" style="margin-top:16px" id="addform">
+      <label>用 ID 加好友</label>
+      <div class="idform">
+        <input name="friend_id" id="fid" inputmode="numeric" placeholder="輸入對方的 12 碼 ID" value="{{ prefill_id or '' }}" required>
+        <button class="btn" type="submit">{{ icon('plus', 16) }}送出邀請</button>
+      </div>
+      <div class="btn-row" style="margin-top:10px">
+        <button type="button" class="btn soft sm" onclick="startScan()">{{ icon('image', 15) }}開啟相機掃 QR</button>
+      </div>
+    </form>
+  </div>
+
+  {# 掃描相機浮層 #}
+  <div id="scan-overlay" class="scan-overlay" style="display:none">
+    <div class="scan-box">
+      <video id="scan-video" playsinline></video>
+      <div class="scan-actions">
+        <span id="scan-msg">對準對方的 QR…</span>
+        <button type="button" class="btn ghost sm" onclick="stopScan()">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  {# 待我同意的邀請（有才顯示）#}
+  {% if incoming %}
+    <h2 class="section">{{ icon('inbox', 16) }}待你同意的好友邀請</h2>
+    <div class="card">
+      {% for r in incoming %}
+        <div class="reqrow">
+          <span class="uname">{{ icon('users', 16) }}{{ r.from_user }}</span>
+          <span class="reqacts">
+            <form class="inline-form" method="post" action="/friend/request/{{ r.id }}/accept">
+              <button class="btn sm" type="submit">{{ icon('check', 15) }}接受</button>
+            </form>
+            <form class="inline-form" method="post" action="/friend/request/{{ r.id }}/decline">
+              <button class="btn ghost sm" type="submit">{{ icon('x', 15) }}拒絕</button>
+            </form>
+          </span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# 已送出、等待對方同意（有才顯示）#}
+  {% if outgoing %}
+    <h2 class="section">{{ icon('log', 16) }}已送出的邀請</h2>
+    <div class="card">
+      {% for r in outgoing %}
+        <div class="reqrow">
+          <span class="uname">{{ icon('users', 16) }}{{ r.to_user }}<span class="tag">等待同意</span></span>
+          <form class="inline-form" method="post" action="/friend/request/{{ r.id }}/decline">
+            <button class="btn ghost sm" type="submit">{{ icon('x', 15) }}取消</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# 我的好友 #}
+  <h2 class="section">{{ icon('users', 16) }}我的好友</h2>
+  {% if friends %}
+    <div class="card" style="padding:6px 22px">
+      <table>
+        <thead><tr><th>帳號</th><th style="text-align:right">操作</th></tr></thead>
+        <tbody>
+          {% for f in friends %}
+            <tr>
+              <td><span class="uname">{{ avatar(f.username, f.avatar_path or f.avatar_preset is not none, 28) }}{{ f.username }}{% if f.is_admin and user.is_admin %} <span class="tag admin">管理者</span>{% endif %}</span></td>
+              <td style="text-align:right">
+                <details class="rowmenu">
+                  <summary>{{ icon('shield', 14) }}管理</summary>
+                  <div class="rowmenu-body">
+                    <form class="inline-form" method="post" action="/friend/remove/{{ f.username }}"
+                          onsubmit="return confirm('移除好友「{{ f.username }}」？移除後彼此無法再互寄。');">
+                      <button class="btn ghost sm" type="submit">{{ icon('x', 15) }}移除好友</button>
+                    </form>
+                  </div>
+                </details>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="empty"><span class="eic">{{ icon('users', 26) }}</span>還沒有好友。把上面的 ID 給同事，或輸入對方的 ID 送出邀請。</div>
+  {% endif %}
+
+  {# 進階：邀請新同事註冊 Slip（建立新帳號）#}
+  <details class="editbox">
+    <summary>{{ icon('plus', 16) }}邀請新同事註冊 Slip</summary>
+    <div class="editbox-body">
+      <form method="post" action="/signup-link">
+        <button class="btn soft" type="submit">{{ icon('link', 16) }}產生註冊連結</button>
+      </form>
+      {% if signups %}
+        <div class="note" style="margin-top:12px">{{ icon('shield', 16) }}<span>連結一次性，{{ '%.0f'|format(72) }} 小時內有效；對方開連結即可自行建立帳號（預設為一般等級）。</span></div>
+        {% for s in signups %}
+          <div style="margin-top:12px">
+            <input id="su-{{ s.id }}" value="{{ s.link }}" readonly onclick="this.select()">
+            <div class="msg-actions">
+              <button type="button" class="btn soft sm" onclick="copyText('su-{{ s.id }}', this)">{{ icon('copy', 15) }}複製連結</button>
+              <form class="inline-form" method="post" action="/signup-link/{{ s.id }}/revoke"
+                    onsubmit="return confirm('作廢這個註冊連結？');">
+                <button class="btn ghost sm" type="submit">{{ icon('x', 15) }}作廢</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </details>
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    function fallbackCopy(text, btn) {
+      var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) {} document.body.removeChild(ta);
+      var o = btn.innerHTML; btn.textContent = "已複製"; setTimeout(function(){ btn.innerHTML = o; }, 1500);
+    }
+    function copyId(btn) {
+      var text = document.getElementById("myid").textContent.trim();
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function(){ var o=btn.innerHTML; btn.textContent="已複製"; setTimeout(function(){btn.innerHTML=o;},1500); }, function(){ fallbackCopy(text, btn); });
+      } else { fallbackCopy(text, btn); }
+    }
+
+    var scanStream = null, scanTimer = null;
+    function stopScan() {
+      if (scanTimer) { clearTimeout(scanTimer); scanTimer = null; }
+      if (scanStream) { scanStream.getTracks().forEach(function (t) { t.stop(); }); scanStream = null; }
+      document.getElementById("scan-overlay").style.display = "none";
+    }
+    function fillFromScan(text) {
+      var digits = "";
+      var m = (text || "").match(/[?&]add=(\d{12})/);
+      if (m) { digits = m[1]; } else { digits = (text || "").replace(/\D/g, ""); }
+      if (digits.length >= 12) {
+        document.getElementById("fid").value = digits.slice(0, 12);
+        stopScan();
+        document.getElementById("addform").submit();
+        return true;
+      }
+      return false;
+    }
+    async function startScan() {
+      if (!("BarcodeDetector" in window)) {
+        alert("這個瀏覽器不支援相機掃描。請改用對方的 QR 連結（用手機相機對 QR 會自動開啟），或手動輸入 12 碼 ID。");
+        return;
+      }
+      var overlay = document.getElementById("scan-overlay");
+      var video = document.getElementById("scan-video");
+      var msg = document.getElementById("scan-msg");
+      try {
+        scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      } catch (e) {
+        alert("無法開啟相機，請確認已允許相機權限。");
+        return;
+      }
+      overlay.style.display = "flex";
+      video.srcObject = scanStream;
+      await video.play();
+      var detector = new BarcodeDetector({ formats: ["qr_code"] });
+      async function tick() {
+        if (!scanStream) return;
+        try {
+          var codes = await detector.detect(video);
+          if (codes && codes.length) {
+            if (fillFromScan(codes[0].rawValue)) return;
+            msg.textContent = "這不是有效的 Slip ID，請對準正確的 QR。";
+          }
+        } catch (e) {}
+        scanTimer = setTimeout(tick, 300);
+      }
+      tick();
+    }
+    function copyText(id, btn) {
+      var el = document.getElementById(id), text = el.value;
+      var done = function () { var o = btn.innerHTML; btn.textContent = "已複製"; setTimeout(function(){ btn.innerHTML = o; }, 1500); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, function () { el.select(); try { document.execCommand("copy"); done(); } catch (e) {} });
+      } else { el.select(); try { document.execCommand("copy"); done(); } catch (e) {} }
+    }
+  </script>
+{% endblock %}

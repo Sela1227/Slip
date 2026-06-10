@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="{{ theme }}"{% if dark %} data-mode="dark"{% endif %}>
+{% from "icons.html" import icon, avatar %}
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon/sela.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="/static/favicon/site.webmanifest">
+  <meta name="theme-color" content="#304073">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Slip">
+  <link rel="stylesheet" href="/static/style.css?v={{ app_version }}">
+  <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="brand"><img src="/static/favicon/sela.svg" alt="SELA">{{ app_name }}<span class="ver">{{ app_version }}</span></span>
+      <div class="topbar-right">
+        <div class="cap" title="全站共用空間（所有帳號＋附件總和）">
+          總空間 {{ capacity.used_mb }} / {{ capacity.limit_mb }} MB
+          <div class="cap-bar"><div class="cap-fill {{ 'warn' if capacity.pct >= 85 else '' }}" style="width: {{ capacity.pct }}%"></div></div>
+        </div>
+        <span class="who">{{ avatar(user.username, user.avatar_path, 26) }}{{ user.username }}{% if user.is_admin %}（管理者）{% endif %}</span>
+        <a class="btn ghost sm logout-btn" href="/logout" title="登出" aria-label="登出">{{ icon('logout', 18) }}</a>
+      </div>
+    </div>
+    <nav class="nav">
+      <a href="/tools"    class="{{ 'active' if active=='tools' }}">{{ icon('copy') }}常用功能</a>
+      <a href="/inbox"    class="{{ 'active' if active=='inbox' }}">{{ icon('inbox') }}訊息夾{% if unread_total %}<span class="nav-badge">{{ unread_total }}</span>{% endif %}</a>
+      <a href="/favorites" class="{{ 'active' if active=='favorites' }}">{{ icon('check') }}我的最愛</a>
+      <a href="/friends"  class="{{ 'active' if active=='friends' }}">{{ icon('users') }}好友{% if pending_requests %}<span class="nav-dot"></span>{% endif %}</a>
+      <a href="/settings" class="{{ 'active' if active=='settings' }}">{{ icon('key') }}個人設定</a>
+      {% if user.is_admin %}<a href="/admin" class="{{ 'active' if active=='admin' }}">{{ icon('shield') }}帳號管理</a>{% endif %}
+    </nav>
+  </header>
+
+  <main class="wrap">
+    {% if announcement %}<div class="announce">{{ icon('inbox', 16) }}<span>{{ announcement }}</span></div>{% endif %}
+    {% if flash %}<div class="flash {{ flash.kind }}">{{ icon('check', 16) if flash.kind=='ok' else icon('x', 16) }}{{ flash.message }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    (function () {
+      var ms = {{ idle_min }} * 60 * 1000, t;
+      function reset() { clearTimeout(t); t = setTimeout(function () { window.location = "/logout"; }, ms); }
+      ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach(function (e) {
+        document.addEventListener(e, reset, { passive: true });
+      });
+      reset();
+    })();
+    // 量 topbar 高度，讓對話標題列能剛好黏在它下面（隨換行/螢幕變動）
+    (function () {
+      var bar = document.querySelector(".topbar");
+      function setH() {
+        if (bar) document.documentElement.style.setProperty("--topbar-h", bar.offsetHeight + "px");
+      }
+      setH();
+      window.addEventListener("resize", setH);
+      window.addEventListener("orientationchange", setH);
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

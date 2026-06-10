@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>建立帳號｜{{ app_name }}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon/sela.svg">
+  <link rel="manifest" href="/static/favicon/site.webmanifest">
+  <meta name="theme-color" content="#304073">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="auth">
+    <div class="auth-card">
+      <div class="auth-brand"><img src="/static/favicon/sela.svg" alt="SELA">{{ app_name }}<span class="ver">{{ app_version }}</span></div>
+
+      {% if flash %}<div class="flash {{ flash.kind }}">{{ flash.message }}</div>{% endif %}
+
+      {% if valid %}
+        <div class="auth-sub">設定你的帳號名稱與密碼即可開始使用</div>
+        <form method="post" action="/signup/{{ token }}" autocomplete="off">
+          <label>帳號名稱</label>
+          <input name="username" placeholder="英數字與底線，2–32 字" autocomplete="off" autofocus required>
+          <label>密碼</label>
+          <input name="password" type="password" placeholder="至少 6 個字" autocomplete="new-password" required>
+          <label>再次輸入密碼</label>
+          <input name="confirm" type="password" placeholder="再打一次" autocomplete="new-password" required>
+          <div class="btn-row"><button class="btn" type="submit" style="width:100%">建立帳號</button></div>
+        </form>
+      {% else %}
+        <div class="auth-sub" style="margin-top:18px">這個註冊連結無效、已被使用，或已過期。請向管理者索取新的連結。</div>
+      {% endif %}
+
+      <div class="foot">Made by SELA　·　{{ app_version }}</div>
+    </div>
+  </div>
+</body>
+</html>

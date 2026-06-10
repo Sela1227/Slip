@@ -1,0 +1,15 @@
+{
+  "name": "Slip 絲利普",
+  "short_name": "Slip",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f1f0ec",
+  "theme_color": "#304073",
+  "icons": [
+    {"src": "/static/favicon/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/static/favicon/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/static/favicon/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}

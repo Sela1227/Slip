@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon, avatar %}
+{% set active = "tools" %}
+{% block title %}常用功能｜{{ app_name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <span class="badge">{{ icon('copy', 22) }}</span>
+    <h1>常用功能</h1>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button type="button" class="tab" data-tab="clip" onclick="showTab('clip')">{{ icon('copy', 15) }}剪貼簿</button>
+    <button type="button" class="tab" data-tab="phrases" onclick="showTab('phrases')">{{ icon('edit', 15) }}常用片語</button>
+    <button type="button" class="tab" data-tab="calc" onclick="showTab('calc')">{{ icon('check', 15) }}計算機</button>
+    <button type="button" class="tab" data-tab="url" onclick="showTab('url')">{{ icon('link', 15) }}縮網址</button>
+    <button type="button" class="tab" data-tab="qr" onclick="showTab('qr')">{{ icon('image', 15) }}QR碼</button>
+    <button type="button" class="tab" data-tab="pdf" onclick="showTab('pdf')">{{ icon('key', 15) }}PDF 解密</button>
+    <button type="button" class="tab" data-tab="bookmark" onclick="showTab('bookmark')">{{ icon('link', 15) }}書籤</button>
+  </div>
+
+  {# 剪貼簿：多分格 #}
+  <section class="tabpane" data-pane="clip">
+    <div class="card">
+      <div class="card-title">{{ icon('copy', 18) }}剪貼簿（暫存區）</div>
+      <p class="card-sub">多個分格，分別暫存不同資料；儲存後跨裝置同步。</p>
+      <form method="post" action="/clipboard" id="clipform">
+        <div id="clip-slots">
+          {% for c in clips %}
+            <div class="clip-slot">
+              <textarea name="slot" rows="3" placeholder="分格內容…">{{ c }}</textarea>
+              <div class="clip-slot-bar">
+                <button type="button" class="btn soft sm" onclick="copySlot(this)">{{ icon('copy', 14) }}複製</button>
+                <button type="button" class="btn ghost sm" onclick="clearSlot(this)">{{ icon('x', 14) }}清空</button>
+                <button type="button" class="btn ghost sm" onclick="removeSlot(this)">{{ icon('trash', 14) }}刪除這格</button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="msg-actions" style="margin-top:12px">
+          <button type="button" class="btn soft" onclick="addSlot()">{{ icon('plus', 15) }}新增分格</button>
+          <button type="button" class="btn ghost" onclick="clearAllSlots()">{{ icon('x', 15) }}全部清空</button>
+          <button class="btn" type="submit">{{ icon('check', 15) }}儲存全部</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {# 常用片語 #}
+  <section class="tabpane" data-pane="phrases">
+    <div class="card">
+      <div class="card-title">{{ icon('edit', 18) }}常用片語（{{ phrases|length }}/{{ phrase_limit }}）</div>
+      <p class="card-sub">設定常用句子，可命名、排序、修改，一鍵複製。內容可多行。</p>
+
+      {% for p in phrases %}
+        <div class="phrase-card">
+          <div class="phrase-label">{{ p.label or '（未命名）' }}</div>
+          <div class="phrase-text" id="ph-{{ p.id }}">{{ p.text }}</div>
+          <div class="phrase-ops">
+            <button type="button" class="btn soft sm" onclick="copyBox('ph-{{ p.id }}', this)">{{ icon('copy', 14) }}複製</button>
+            {% if not loop.first %}<form method="post" action="/phrase/{{ p.id }}/move"><input type="hidden" name="dir" value="up"><button class="btn soft sm" type="submit">↑</button></form>{% endif %}
+            {% if not loop.last %}<form method="post" action="/phrase/{{ p.id }}/move"><input type="hidden" name="dir" value="down"><button class="btn soft sm" type="submit">↓</button></form>{% endif %}
+            <button type="button" class="btn soft sm" onclick="toggleEdit('ed-{{ p.id }}')">{{ icon('edit', 14) }}編輯</button>
+            <form method="post" action="/phrase/{{ p.id }}/delete" onsubmit="return confirm('刪除這個片語？');">
+              <button class="btn ghost sm" type="submit">{{ icon('x', 14) }}刪除</button>
+            </form>
+          </div>
+          <div class="phrase-editbox" id="ed-{{ p.id }}" style="display:none">
+            <form method="post" action="/phrase/{{ p.id }}/edit">
+              <label>名稱</label>
+              <input name="label" value="{{ p.label or '' }}" placeholder="名稱（選填）" maxlength="80">
+              <label>內容</label>
+              <textarea name="text" rows="3" placeholder="內容（可多行）" maxlength="300" required>{{ p.text }}</textarea>
+              <div class="msg-actions" style="margin-top:10px">
+                <button class="btn" type="submit">{{ icon('check', 14) }}儲存修改</button>
+                <button class="btn ghost" type="button" onclick="toggleEdit('ed-{{ p.id }}')">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+
+      {% if phrases|length < phrase_limit %}
+        <div class="phrase-add-wrap">
+          <button type="button" class="btn" onclick="toggleEdit('add-phrase')">{{ icon('plus', 15) }}新增片語</button>
+          <div id="add-phrase" class="phrase-editbox" style="display:none; margin-top:12px">
+            <form method="post" action="/phrase/add">
+              <label>名稱</label>
+              <input name="label" placeholder="名稱（選填，例：定位單）" maxlength="80">
+              <label>內容</label>
+              <textarea name="text" rows="3" placeholder="內容（可多行，例：記得幫病人開定位單）" maxlength="300" required></textarea>
+              <div class="msg-actions" style="margin-top:10px">
+                <button class="btn" type="submit">{{ icon('check', 15) }}新增</button>
+                <button class="btn ghost" type="button" onclick="toggleEdit('add-phrase')">取消</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <p class="card-sub" style="margin-top:12px">已達 {{ phrase_limit }} 個上限，請先刪除一些再新增。</p>
+      {% endif %}
+    </div>
+  </section>
+
+  {# 計算機 #}
+  <section class="tabpane" data-pane="calc">
+    <div class="card">
+      <div class="card-title">{{ icon('check', 18) }}簡易計算機</div>
+      <input type="text" id="calc-display" class="calc-display" placeholder="0" inputmode="none"
+             autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other">
+      <p class="card-sub" style="margin-top:6px">點數字鍵輸入（電腦也可用實體鍵盤）；可在算式中間點一下游標插入。Enter＝等於、Esc＝清除。</p>
+      <div class="calc-grid">
+        <button type="button" class="calc-btn fn" onclick="calcClear()">C</button>
+        <button type="button" class="calc-btn fn" onclick="calcBack()">⌫</button>
+        <button type="button" class="calc-btn op" onclick="calcIns('(')">(</button>
+        <button type="button" class="calc-btn op" onclick="calcIns(')')">)</button>
+        <button type="button" class="calc-btn" onclick="calcIns('7')">7</button>
+        <button type="button" class="calc-btn" onclick="calcIns('8')">8</button>
+        <button type="button" class="calc-btn" onclick="calcIns('9')">9</button>
+        <button type="button" class="calc-btn op" onclick="calcIns('/')">÷</button>
+        <button type="button" class="calc-btn" onclick="calcIns('4')">4</button>
+        <button type="button" class="calc-btn" onclick="calcIns('5')">5</button>
+        <button type="button" class="calc-btn" onclick="calcIns('6')">6</button>
+        <button type="button" class="calc-btn op" onclick="calcIns('*')">×</button>
+        <button type="button" class="calc-btn" onclick="calcIns('1')">1</button>
+        <button type="button" class="calc-btn" onclick="calcIns('2')">2</button>
+        <button type="button" class="calc-btn" onclick="calcIns('3')">3</button>
+        <button type="button" class="calc-btn op" onclick="calcIns('-')">−</button>
+        <button type="button" class="calc-btn" onclick="calcIns('0')">0</button>
+        <button type="button" class="calc-btn" onclick="calcIns('.')">.</button>
+        <button type="button" class="calc-btn op" onclick="calcIns('%')">%</button>
+        <button type="button" class="calc-btn op" onclick="calcIns('+')">+</button>
+        <button type="button" class="calc-btn eq" onclick="calcEq()">=</button>
+      </div>
+    </div>
+  </section>
+  {# 縮網址 #}
+  <section class="tabpane" data-pane="url">
+    <div class="card">
+      <div class="card-title">{{ icon('link', 18) }}縮網址</div>
+      <p class="card-sub">把長網址縮成本站短連結（私有、不經第三方）；點開會自動轉到原網址。</p>
+      <form method="post" action="/shorten" class="idform">
+        <input name="url" type="url" placeholder="貼上長網址（http:// 或 https://）" required>
+        <button class="btn" type="submit">{{ icon('link', 15) }}縮短</button>
+      </form>
+      {% for l in links %}
+        <div class="phrase-card">
+          <div class="phrase-label"><a href="{{ l.short }}" target="_blank" rel="noopener">{{ l.short }}</a></div>
+          <div class="phrase-text" id="lk-{{ l.id }}">{{ l.url }}</div>
+          <div class="phrase-ops">
+            <button type="button" class="btn soft sm" onclick="copyText('{{ l.short }}', this)">{{ icon('copy', 14) }}複製短網址</button>
+            <a class="btn soft sm" href="/tools?tab=qr&qr={{ l.short | urlencode }}">{{ icon('image', 14) }}做成 QR</a>
+            <form method="post" action="/shorten/{{ l.id }}/delete" onsubmit="return confirm('刪除這個短網址？');">
+              <button class="btn ghost sm" type="submit">{{ icon('x', 14) }}刪除</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {# QR 產生 #}
+  <section class="tabpane" data-pane="qr">
+    <div class="card">
+      <div class="card-title">{{ icon('image', 18) }}QR 產生</div>
+      <p class="card-sub">把網址或文字轉成 QR Code，可下載，或直接傳送給自己／好友（會成為一則含圖片的訊息）。</p>
+      <form method="post" action="/qr/send" id="qrform">
+        <textarea name="data" id="qr-data" rows="3" placeholder="輸入網址或文字…" maxlength="1500" required>{{ qr_data }}</textarea>
+        <div class="msg-actions" style="margin-top:10px">
+          <button type="button" class="btn" onclick="qrGen()">{{ icon('image', 15) }}產生 QR</button>
+        </div>
+        <div id="qr-result" style="display:none; margin-top:14px; text-align:center">
+          <img id="qr-img" class="qr-img" alt="QR">
+          <div class="qr-send">
+            <a id="qr-dl" class="btn soft" download="qr.png">{{ icon('download', 15) }}下載</a>
+            <span class="qr-to">傳送給
+              <select name="recipient">
+                {% for r in qr_recipients %}<option value="{{ r }}">{{ '自己' if r == user.username else r }}</option>{% endfor %}
+              </select>
+            </span>
+            <button class="btn" type="submit">{{ icon('send', 15) }}傳送</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  {# 解 PDF 密碼 #}
+  <section class="tabpane" data-pane="pdf">
+    <div class="card">
+      <div class="card-title">{{ icon('key', 18) }}解 PDF 密碼</div>
+      <p class="card-sub">上傳有密碼的 PDF 並輸入你已知的密碼，下載無密碼版本。檔案只在伺服器記憶體即時處理、不會存檔。</p>
+      <form method="post" action="/pdf/unlock" enctype="multipart/form-data" class="pdf-form">
+        <label class="pdf-file">
+          {{ icon('file', 16) }}<span id="pdf-name">選擇 PDF 檔…</span>
+          <input type="file" name="pdf" accept="application/pdf,.pdf" required
+                 onchange="document.getElementById('pdf-name').textContent = (this.files[0] ? this.files[0].name : '選擇 PDF 檔…')">
+        </label>
+        <div class="pw-wrap">
+          <input type="password" name="password" id="pdf-pw" placeholder="PDF 密碼" autocomplete="off" required>
+          <button type="button" class="pw-eye" aria-label="顯示/隱藏密碼" onclick="togglePw('pdf-pw', this)">{{ icon('eye', 18) }}</button>
+        </div>
+        <button class="btn" type="submit">{{ icon('download', 15) }}解密並下載</button>
+      </form>
+    </div>
+  </section>
+
+  {# 網頁書籤 #}
+  <section class="tabpane" data-pane="bookmark">
+    <div class="card">
+      <div class="card-title">{{ icon('link', 18) }}網頁書籤</div>
+      <p class="card-sub">收藏常用網址，一鍵開啟或複製；跨裝置同步。</p>
+      {% for b in bookmarks %}
+        <div class="phrase-card">
+          <div class="phrase-label"><a href="{{ b.url }}" target="_blank" rel="noopener">{{ b.label or b.url }}</a></div>
+          {% if b.label %}<div class="phrase-text">{{ b.url }}</div>{% endif %}
+          <div class="phrase-ops">
+            <a class="btn soft sm" href="{{ b.url }}" target="_blank" rel="noopener">{{ icon('link', 14) }}開啟</a>
+            <button type="button" class="btn soft sm" onclick="copyText('{{ b.url }}', this)">{{ icon('copy', 14) }}複製</button>
+            <form method="post" action="/bookmark/{{ b.id }}/delete" onsubmit="return confirm('刪除這個書籤？');">
+              <button class="btn ghost sm" type="submit">{{ icon('x', 14) }}刪除</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+      <div class="phrase-add-wrap">
+        <button type="button" class="btn" onclick="toggleEdit('add-bookmark')">{{ icon('plus', 15) }}新增書籤</button>
+        <div id="add-bookmark" class="phrase-editbox" style="display:none; margin-top:12px">
+          <form method="post" action="/bookmark/add">
+            <label>名稱</label>
+            <input name="label" placeholder="名稱（選填，例：健保署查詢）" maxlength="120">
+            <label>網址</label>
+            <input name="url" type="url" placeholder="https://…" required>
+            <div class="msg-actions" style="margin-top:10px">
+              <button class="btn" type="submit">{{ icon('check', 15) }}新增</button>
+              <button class="btn ghost" type="button" onclick="toggleEdit('add-bookmark')">取消</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  var INIT_TAB = "{{ tab }}";
+  function showTab(name) {
+    document.querySelectorAll(".tabpane").forEach(function (p) {
+      p.style.display = (p.getAttribute("data-pane") === name) ? "" : "none";
+    });
+    document.querySelectorAll(".tab").forEach(function (t) {
+      t.classList.toggle("on", t.getAttribute("data-tab") === name);
+    });
+    try { history.replaceState(null, "", "/tools?tab=" + name); } catch (e) {}
+    if (name === "calc") { var d = document.getElementById("calc-display"); if (d) d.focus(); }
+  }
+  showTab(["clip", "phrases", "calc", "url", "qr", "pdf", "bookmark"].indexOf(INIT_TAB) >= 0 ? INIT_TAB : "clip");
+
+  function copyText(text, btn) { doCopy(text, btn); }
+  function togglePw(id, btn) {
+    var el = document.getElementById(id);
+    var show = el.type === "password";
+    el.type = show ? "text" : "password";
+    btn.innerHTML = '{{ icon("eye-off", 18) | replace("\n","") }}';
+    if (!show) btn.innerHTML = '{{ icon("eye", 18) | replace("\n","") }}';
+  }
+  function qrGen() {
+    var v = document.getElementById("qr-data").value.trim();
+    if (!v) { alert("請先輸入網址或文字。"); return; }
+    var src = "/qr/img?data=" + encodeURIComponent(v);
+    document.getElementById("qr-img").src = src;
+    document.getElementById("qr-dl").href = src + "&dl=1";
+    document.getElementById("qr-result").style.display = "";
+  }
+  (function () { if (INIT_TAB === "qr" && document.getElementById("qr-data").value.trim()) qrGen(); })();
+
+  function toggleEdit(id) {
+    var el = document.getElementById(id);
+    el.style.display = (el.style.display === "none" || !el.style.display) ? "" : "none";
+  }
+
+  function doCopy(text, btn) {
+    function done() { var o = btn.innerHTML; btn.textContent = "已複製"; setTimeout(function(){ btn.innerHTML = o; }, 1200); }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(done, function(){ fb(text); done(); });
+    } else { fb(text); done(); }
+    function fb(t) {
+      var ta = document.createElement("textarea");
+      ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  }
+  function copyBox(id, btn) {
+    var el = document.getElementById(id);
+    doCopy((el.value !== undefined) ? el.value : el.textContent, btn);
+  }
+  function copySlot(btn) {
+    var ta = btn.closest(".clip-slot").querySelector("textarea");
+    doCopy(ta.value, btn);
+  }
+  function clearSlot(btn) { btn.closest(".clip-slot").querySelector("textarea").value = ""; }
+  function clearAllSlots() {
+    if (!confirm("清空所有分格內容？（按「儲存全部」後才會永久生效）")) return;
+    document.querySelectorAll("#clip-slots textarea").forEach(function (t) { t.value = ""; });
+  }
+  function addSlot() {
+    var box = document.getElementById("clip-slots");
+    if (box.querySelectorAll(".clip-slot").length >= 12) { alert("分格最多 12 個。"); return; }
+    var div = document.createElement("div");
+    div.className = "clip-slot";
+    div.innerHTML = '<textarea name="slot" rows="3" placeholder="分格內容…"></textarea>' +
+      '<div class="clip-slot-bar">' +
+      '<button type="button" class="btn soft sm" onclick="copySlot(this)">複製</button>' +
+      '<button type="button" class="btn ghost sm" onclick="clearSlot(this)">清空</button>' +
+      '<button type="button" class="btn ghost sm" onclick="removeSlot(this)">刪除這格</button></div>';
+    box.appendChild(div);
+    div.querySelector("textarea").focus();
+  }
+  function removeSlot(btn) {
+    var box = document.getElementById("clip-slots");
+    var slot = btn.closest(".clip-slot");
+    if (box.querySelectorAll(".clip-slot").length <= 1) { slot.querySelector("textarea").value = ""; return; }
+    slot.remove();
+  }
+
+  /* ===== 計算機：支援括號、游標插入、實體鍵盤；自製安全運算（不用 eval）===== */
+  var disp = document.getElementById("calc-display");
+  function calcIns(t) {
+    var s = disp.selectionStart, e = disp.selectionEnd, v = disp.value;
+    if (s === null || s === undefined) { s = e = v.length; }
+    disp.value = v.slice(0, s) + t + v.slice(e);
+    var pos = s + t.length;
+    disp.focus(); disp.setSelectionRange(pos, pos);
+  }
+  function calcClear() { disp.value = ""; disp.focus(); }
+  function calcBack() {
+    var s = disp.selectionStart, e = disp.selectionEnd, v = disp.value;
+    if (s === null) { disp.value = v.slice(0, -1); return; }
+    if (s !== e) { disp.value = v.slice(0, s) + v.slice(e); disp.setSelectionRange(s, s); }
+    else if (s > 0) { disp.value = v.slice(0, s - 1) + v.slice(e); disp.setSelectionRange(s - 1, s - 1); }
+    disp.focus();
+  }
+  function calcEq() {
+    try {
+      var r = calcEvaluate(disp.value);
+      if (r === null || !isFinite(r)) { disp.value = "錯誤"; return; }
+      r = Math.round(r * 1e10) / 1e10;
+      disp.value = String(r);
+      disp.setSelectionRange(disp.value.length, disp.value.length);
+    } catch (e) { disp.value = "錯誤"; }
+  }
+  disp.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); calcEq(); }
+    else if (e.key === "Escape") { e.preventDefault(); calcClear(); }
+  });
+
+  function calcTokenize(s) {
+    var t = [], i = 0;
+    while (i < s.length) {
+      var ch = s[i];
+      if (ch === " ") { i++; continue; }
+      if (/[0-9.]/.test(ch)) {
+        var num = ch; i++;
+        while (i < s.length && /[0-9.]/.test(s[i])) { num += s[i]; i++; }
+        t.push({ t: "num", v: parseFloat(num) });
+      } else if ("+-*/%".indexOf(ch) >= 0) {
+        var prev = t[t.length - 1];
+        if ((ch === "-" || ch === "+") && (!prev || prev.t === "op" || prev.t === "u" || (prev.t === "p" && prev.v === "("))) {
+          t.push({ t: "u", v: ch });
+        } else { t.push({ t: "op", v: ch }); }
+        i++;
+      } else if (ch === "(" || ch === ")") { t.push({ t: "p", v: ch }); i++; }
+      else { throw "bad"; }
+    }
+    return t;
+  }
+  function calcRPN(toks) {
+    var out = [], ops = [], prec = { "+": 1, "-": 1, "*": 2, "/": 2, "%": 2 };
+    for (var k = 0; k < toks.length; k++) {
+      var tk = toks[k];
+      if (tk.t === "num") out.push(tk);
+      else if (tk.t === "u") ops.push(tk);
+      else if (tk.t === "op") {
+        while (ops.length) {
+          var top = ops[ops.length - 1];
+          if (top.t === "u") out.push(ops.pop());
+          else if (top.t === "op" && prec[top.v] >= prec[tk.v]) out.push(ops.pop());
+          else break;
+        }
+        ops.push(tk);
+      } else if (tk.v === "(") ops.push(tk);
+      else {
+        while (ops.length && !(ops[ops.length - 1].t === "p")) out.push(ops.pop());
+        if (!ops.length) throw "paren";
+        ops.pop();
+      }
+    }
+    while (ops.length) { var o = ops.pop(); if (o.t === "p") throw "paren"; out.push(o); }
+    return out;
+  }
+  function calcEvaluate(s) {
+    s = (s || "").trim(); if (!s) return null;
+    var rpn = calcRPN(calcTokenize(s)), st = [];
+    for (var k = 0; k < rpn.length; k++) {
+      var tk = rpn[k];
+      if (tk.t === "num") st.push(tk.v);
+      else if (tk.t === "u") { var a = st.pop(); if (a === undefined) throw "e"; st.push(tk.v === "-" ? -a : a); }
+      else {
+        var b = st.pop(), a2 = st.pop(); if (a2 === undefined || b === undefined) throw "e";
+        var r; if (tk.v === "+") r = a2 + b; else if (tk.v === "-") r = a2 - b;
+        else if (tk.v === "*") r = a2 * b; else if (tk.v === "/") r = a2 / b; else r = a2 % b;
+        st.push(r);
+      }
+    }
+    if (st.length !== 1) throw "e";
+    return st[0];
+  }
+</script>
+{% endblock %}

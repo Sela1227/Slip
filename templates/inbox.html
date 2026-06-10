@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon, avatar %}
+{% set active = "inbox" %}
+{% block title %}訊息夾｜{{ app_name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <span class="badge">{{ icon('inbox', 22) }}</span>
+    <h1>訊息夾</h1>
+  </div>
+
+  {# 給自己的待辦／提醒：有寫就顯示，沒寫就縮成小小一條 #}
+  <details class="selfnote {{ 'filled' if user_note else 'empty' }}">
+    <summary>
+      {% if user_note %}
+        <span class="selfnote-on">{{ icon('check', 16) }}<span class="selfnote-text">{{ user_note }}</span></span>
+        <span class="selfnote-edit">編輯</span>
+      {% else %}
+        <span class="selfnote-add">{{ icon('plus', 15) }}給自己的待辦／提醒</span>
+      {% endif %}
+    </summary>
+    <div class="editbox-body">
+      <form method="post" action="/note">
+        <textarea name="note" rows="3" placeholder="寫下要提醒自己的事，可多行…">{{ user_note or '' }}</textarea>
+        <div class="msg-actions" style="margin-top:10px">
+          <button class="btn" type="submit">{{ icon('check', 15) }}儲存</button>
+        </div>
+      </form>
+      {% if user_note %}
+        <form method="post" action="/note" class="inline-form" style="margin-top:8px">
+          <input type="hidden" name="note" value="">
+          <button class="btn ghost sm" type="submit">{{ icon('x', 15) }}清除待辦</button>
+        </form>
+      {% endif %}
+    </div>
+  </details>
+
+  {% macro convo_row(c) %}
+    <a class="convo" href="/inbox/{{ c.other }}">
+      {{ avatar(c.other, c.other in avset, 44) }}
+      <span class="convo-main">
+        <span class="convo-top">
+          <span class="convo-name">{{ '自己（傳給自己）' if c.other == user.username else c.other }}</span>
+          {% if c.last_at %}<span class="convo-time">{{ localtime(c.last_at).strftime("%m/%d %H:%M") }}</span>{% endif %}
+        </span>
+        <span class="convo-prev">{{ c.preview or '尚無訊息，點進去開始傳' }}</span>
+      </span>
+      {% if c.unread %}<span class="unread">{{ c.unread }}</span>{% endif %}
+    </a>
+  {% endmacro %}
+
+  <div class="convo-list">
+    {{ convo_row(self_convo) }}
+    {% for c in convos %}{{ convo_row(c) }}{% endfor %}
+  </div>
+
+  {% if not convos %}
+    <div class="empty" style="padding-top:30px">
+      還沒有可聊的對象。到「好友」頁，把你的 ID 給對方、或輸入對方的 ID 送出邀請，互加後就會出現在這裡。
+    </div>
+  {% endif %}
+{% endblock %}

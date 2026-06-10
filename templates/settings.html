@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon, avatar %}
+{% set active = "settings" %}
+{% block title %}個人設定｜{{ app_name }}{% endblock %}
+{% block content %}
+  <div class="page-head">
+    <span class="badge">{{ icon('users', 22) }}</span>
+    <h1>個人設定</h1>
+  </div>
+
+  <div class="card">
+    {# 現況（永遠顯示）#}
+    <div style="display:flex;align-items:center;gap:16px">
+      {{ avatar(user.username, user.avatar_path or user.avatar_preset is not none, 64) }}
+      <div>
+        <div style="font-weight:650;color:var(--ink)">{{ user.username }}{% if user.is_admin %}（管理者）{% endif %}</div>
+        <div class="sz" style="color:var(--muted);font-size:13px">等級：{{ tier_name }}{% if quota_mb %}　·　本月上傳 {{ human_size(month_upload) }} / {{ quota_mb }} MB{% else %}　·　本月上傳 {{ human_size(month_upload) }}{% endif %}</div>
+      </div>
+    </div>
+
+    {# 點開才顯示：更換頭像 #}
+    <details class="editbox">
+      <summary>{{ icon('image', 16) }}更換頭像</summary>
+      <div class="editbox-body">
+        <form method="post" action="/avatar" autocomplete="off" enctype="multipart/form-data">
+          <label>上傳照片當頭像</label>
+          <label class="file-drop" for="av">
+            <span class="fic">{{ icon('image', 20) }}</span>
+            <span>
+              <div class="ft" id="av-name">點此選擇圖片</div>
+              <div class="fh">png / jpg / gif / webp</div>
+            </span>
+            <input id="av" type="file" name="avatar" accept="image/*"
+                   onchange="document.getElementById('av-name').textContent = this.files.length ? this.files[0].name : '點此選擇圖片';">
+          </label>
+          <div class="btn-row"><button class="btn" type="submit">{{ icon('check', 16) }}上傳</button></div>
+        </form>
+
+        {% if user.avatar_orig %}
+          <form method="post" action="/avatar/position" style="margin-top:8px">
+            <label>調整頭像中心位置</label>
+            <div class="focal">
+              <div class="focal-frame"><img id="focal-img" src="/avatar/original" alt="" style="object-position:{{ fx }}% {{ fy }}%"></div>
+              <div class="focal-controls">
+                <span>水平</span><input type="range" name="fx" min="0" max="100" value="{{ fx }}" oninput="moveFocal()">
+                <span>垂直</span><input type="range" name="fy" min="0" max="100" value="{{ fy }}" oninput="moveFocal()">
+              </div>
+            </div>
+            <div class="btn-row"><button class="btn soft" type="submit">{{ icon('check', 16) }}套用中心位置</button></div>
+          </form>
+        {% endif %}
+
+        <label style="margin-top:16px">或選用內建頭像（北歐風）</label>
+        <div class="preset-grid">
+          {% for p in presets %}
+            <form method="post" action="/avatar/preset/{{ p.i }}">
+              <button type="submit" class="preset-pick {{ 'on' if user.avatar_preset == p.i }}" title="選用這個頭像">{{ p.svg|safe }}</button>
+            </form>
+          {% endfor %}
+        </div>
+
+        {% if user.avatar_path or user.avatar_preset is not none %}
+          <form method="post" action="/avatar/remove" style="margin-top:12px">
+            <button class="btn ghost sm" type="submit">{{ icon('trash', 15) }}移除頭像（改回字首）</button>
+          </form>
+        {% endif %}
+      </div>
+    </details>
+
+    {# 點開才顯示：更換配色 #}
+    <details class="editbox">
+      <summary>{{ icon('image', 16) }}更換介面配色</summary>
+      <div class="editbox-body">
+        <div class="theme-grid">
+          {% for t in themes %}
+            <form method="post" action="/theme">
+              <input type="hidden" name="theme" value="{{ t.key }}">
+              <button type="submit" class="theme-pick {{ 'on' if theme == t.key }}">
+                <span class="theme-dot" style="background:{{ t.color }}"></span>{{ t.name }}
+              </button>
+            </form>
+          {% endfor %}
+        </div>
+        <label style="margin-top:16px">明暗</label>
+        <div class="theme-grid">
+          <form method="post" action="/darkmode">
+            <button type="submit" class="theme-pick {{ '' if dark else 'on' }}">淺色</button>
+          </form>
+          <form method="post" action="/darkmode">
+            <input type="hidden" name="dark" value="1">
+            <button type="submit" class="theme-pick {{ 'on' if dark else '' }}">暗色</button>
+          </form>
+        </div>
+      </div>
+    </details>
+
+    {# 點開才顯示：修改密碼 #}
+    <details class="editbox">
+      <summary>{{ icon('key', 16) }}修改密碼</summary>
+      <div class="editbox-body">
+        <form method="post" action="/password" autocomplete="off">
+          <label>目前密碼</label>
+          <input name="old" type="password" autocomplete="current-password" required>
+          <label>新密碼（至少 6 個字元）</label>
+          <input name="new" type="password" autocomplete="new-password" required>
+          <label>再次輸入新密碼</label>
+          <input name="confirm" type="password" autocomplete="new-password" required>
+          <div class="btn-row"><button class="btn" type="submit">{{ icon('check', 16) }}更新密碼</button></div>
+        </form>
+      </div>
+    </details>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    function moveFocal() {
+      var fx = document.getElementsByName("fx")[0].value;
+      var fy = document.getElementsByName("fy")[0].value;
+      document.getElementById("focal-img").style.objectPosition = fx + "% " + fy + "%";
+    }
+  </script>
+{% endblock %}

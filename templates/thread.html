@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% from "icons.html" import icon, avatar %}
+{% set active = "inbox" %}
+{% block title %}{{ '自己' if other == user.username else other }}｜{{ app_name }}{% endblock %}
+{% block content %}
+  <div class="thread-head">
+    <a class="btn ghost sm" href="/inbox">返回</a>
+    {{ avatar(other, other in avset, 34) }}
+    <span class="thread-name">{{ '自己（傳給自己）' if other == user.username else other }}</span>
+    <span class="spacer"></span>
+    {% if messages %}
+      <form class="inline-form" method="post" action="/inbox/{{ other }}/clear"
+            onsubmit="return confirm('清除這個對話的全部訊息？無法復原。');">
+        <button class="btn ghost sm" type="submit">{{ icon('trash', 15) }}清除</button>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if private_convo %}
+    <div class="private-banner">{{ icon('shield', 15) }}私密對話：雙方訊息僅保留 1 天，之後自動刪除。</div>
+  {% endif %}
+
+  <div class="chat" id="chat">
+    {% if not messages %}
+      <div class="empty"><span class="eic">{{ icon('inbox', 26) }}</span>還沒有訊息，在下面輸入開始聊。</div>
+    {% endif %}
+    {% for m in messages %}
+      <div class="bubble-row {{ 'me' if m.sender == user.username else 'them' }}">
+        {% if m.sender != user.username %}{{ avatar(m.sender, m.sender in avset, 30) }}{% endif %}
+        <div class="bubble-col">
+        <div class="bubble{{ ' sticker' if m.sticker else '' }}">
+          {% if m.title %}<div class="bubble-title">{{ m.title }}</div>{% endif %}
+          {% if m.sticker %}<img class="sticker-img" src="/static/stickers/{{ m.sticker }}" alt="貼圖" onerror="this.style.display='none'">{% endif %}
+          {% if m.body %}<div class="bubble-body clamp" id="msg-{{ m.id }}">{{ m.body }}</div>
+            <button type="button" class="more-btn linklike" data-for="msg-{{ m.id }}" style="display:none">展開</button>{% endif %}
+          {% for a in m.attachments %}
+            {% if is_image(a.name) %}
+              <div class="att-img">
+                <a href="/attachment/{{ a.id }}" target="_blank"><img src="/attachment/{{ a.id }}" alt="{{ a.name }}" onerror="imgGone(this)"></a>
+                <a class="att-img-dl" href="/attachment/{{ a.id }}" download="{{ a.name }}">{{ icon('download', 13) }}{{ human_size(a.size) }}</a>
+              </div>
+            {% else %}
+              <div class="att">
+                <div class="att-file">
+                  <span class="fic">{{ icon('file', 18) }}</span>
+                  <span><div class="nm">{{ a.name }}</div><div class="sz">{{ human_size(a.size) }}</div></span>
+                  <a class="btn soft sm dl" href="/attachment/{{ a.id }}" download="{{ a.name }}">{{ icon('download', 14) }}下載</a>
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+          {% if m.tags %}
+            <div class="tags">{{ icon('clip', 13) }}{% for t in m.tags.split(',') %}<span class="tagchip">{{ t }}</span>{% endfor %}<span class="keep">不會自動刪除</span></div>
+          {% endif %}
+          </div>{# /.bubble #}
+          <div class="bubble-meta">
+            <span>{{ localtime(m.created_at).strftime("%m/%d %H:%M") }}</span>
+            {% if m.sender == user.username and not is_self %}
+              {% if m.is_read %}
+                <span class="read-state read">已讀{% if m.read_at %} {{ localtime(m.read_at).strftime("%H:%M") }}{% endif %}</span>
+              {% else %}
+                <span class="read-state">未讀</span>
+              {% endif %}
+            {% endif %}
+            <form class="inline-form" method="post" action="/message/{{ m.id }}/favorite?next=/inbox/{{ other }}">
+              <button type="submit" class="linklike star {{ 'on' if m.id in fav_ids }}" title="我的最愛">{{ '★ 已收藏' if m.id in fav_ids else '☆ 收藏' }}</button>
+            </form>
+            <details class="msg-menu">
+              <summary class="linklike">更多</summary>
+              <div class="msg-menu-body">
+                {% if m.body %}<button type="button" class="linklike" onclick="copyMsg('msg-{{ m.id }}', this)">複製內容</button>{% endif %}
+                {% if m.recipient == user.username %}
+                  <form method="post" action="/message/{{ m.id }}/title" class="mini">
+                    <input name="title" value="{{ m.title or '' }}" placeholder="自訂標題" maxlength="200">
+                    <button type="submit" class="btn soft sm">存標題</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="/message/{{ m.id }}/tags" class="mini">
+                  <input name="tags" value="{{ m.tags or '' }}" placeholder="標籤（逗號分隔，設了不自動刪）">
+                  <button type="submit" class="btn soft sm">存標籤</button>
+                </form>
+                <form method="post" action="/message/{{ m.id }}/delete"><button type="submit" class="linklike danger-link">刪除訊息</button></form>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="composer-wrap">
+    {% if quota_left_h %}<div class="quota-hint">本月可上傳剩餘 {{ quota_left_h }}（{{ tier_name }}）</div>{% endif %}
+    {% if sticker_packs %}
+      <div id="sticker-panel" class="sticker-panel" style="display:none">
+        {% if sticker_packs|length > 1 %}
+          <div class="sticker-tabs">
+            {% for p in sticker_packs %}
+              <button type="button" class="sticker-tab" data-pk="{{ loop.index0 }}" onclick="showPack({{ loop.index0 }})">{{ p.name }}</button>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <form method="post" action="/sticker">
+          <input type="hidden" name="recipient" value="{{ other }}">
+          {% for p in sticker_packs %}
+            <div class="sticker-grid" data-pk="{{ loop.index0 }}">
+              {% for rel in p.files %}
+                <button class="sticker-pick" type="submit" name="sticker" value="{{ rel }}" title="{{ p.name }}">
+                  <img src="/static/stickers/{{ rel }}" loading="lazy" alt="">
+                </button>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </form>
+      </div>
+    {% endif %}
+    <div id="cfile-info" class="composer-files" style="display:none"></div>
+    <form class="composer" method="post" action="/compose" enctype="multipart/form-data">
+      <input type="hidden" name="recipient" value="{{ other }}">
+      {% if sticker_packs %}<button type="button" class="composer-clip" title="貼圖" onclick="toggleStickers()">{{ icon('smile', 20) }}</button>{% endif %}
+      <label class="composer-clip" for="cfile-img" title="加圖片（相簿 / 相機）">{{ icon('image', 20) }}</label>
+      <input id="cfile-img" type="file" name="attachment" accept="image/*" multiple style="display:none">
+      {% if can_files %}
+        <label class="composer-clip" for="cfile-doc" title="加檔案">{{ icon('clip', 20) }}</label>
+        <input id="cfile-doc" type="file" name="attachment" multiple style="display:none">
+      {% endif %}
+      <textarea name="body" id="cbody" rows="1" placeholder="輸入訊息…"></textarea>
+      <button id="csend" class="btn composer-send" type="submit">{{ icon('send', 18) }}<span class="send-label">送出</span></button>
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script>
+    function imgGone(img) { var w = img.closest(".att-img"); if (w) w.outerHTML = '<div class="att-gone">圖片無法顯示（可能已過期或遺失）</div>'; }
+    function toggleStickers() {
+      var p = document.getElementById("sticker-panel");
+      if (!p) return;
+      var open = (p.style.display === "none" || !p.style.display);
+      p.style.display = open ? "" : "none";
+      if (open) showPack(0);
+    }
+    function showPack(i) {
+      document.querySelectorAll("#sticker-panel .sticker-grid").forEach(function (g) {
+        g.style.display = (g.getAttribute("data-pk") === String(i)) ? "grid" : "none";
+      });
+      document.querySelectorAll("#sticker-panel .sticker-tab").forEach(function (t) {
+        t.classList.toggle("on", t.getAttribute("data-pk") === String(i));
+      });
+    }
+    var chat = document.getElementById("chat");
+    window.scrollTo(0, document.body.scrollHeight);  // 開啟對話捲到最新
+
+    // 超過 5 行（被 clamp 限制）的訊息，顯示「展開」鍵
+    document.querySelectorAll(".bubble-body.clamp").forEach(function (el) {
+      var btn = el.parentNode.querySelector(".more-btn[data-for='" + el.id + "']");
+      if (!btn) return;
+      if (el.scrollHeight - el.clientHeight > 2) {
+        btn.style.display = "";
+        btn.addEventListener("click", function () {
+          var open = el.classList.toggle("clamp") === false;
+          btn.textContent = open ? "收合" : "展開";
+        });
+      } else {
+        el.classList.remove("clamp");  // 沒超過就不收合、不顯示鍵
+      }
+    });
+
+    var imgInput = document.getElementById("cfile-img");
+    var docInput = document.getElementById("cfile-doc");
+    function selectedFiles() {
+      var a = imgInput ? Array.prototype.slice.call(imgInput.files) : [];
+      var b = docInput ? Array.prototype.slice.call(docInput.files) : [];
+      return a.concat(b);
+    }
+    function renderFiles() {
+      var info = document.getElementById("cfile-info");
+      var files = selectedFiles();
+      info.innerHTML = "";
+      var sendBtn = document.getElementById("csend");
+      if (!files.length) {
+        info.style.display = "none";
+        if (sendBtn) sendBtn.classList.remove("ready");
+        return;
+      }
+      info.style.display = "flex";
+      var hint = document.createElement("div");
+      hint.className = "cfile-hint";
+      hint.textContent = "已選 " + files.length + " 個，按「送出」傳出";
+      info.appendChild(hint);
+      files.forEach(function (f) {
+        var chip = document.createElement("span");
+        chip.className = "fchip";
+        if (f.type && f.type.indexOf("image/") === 0) {
+          var im = document.createElement("img");
+          im.src = URL.createObjectURL(f);
+          chip.appendChild(im);
+        } else {
+          var ic = document.createElement("span");
+          ic.className = "fchip-ic"; ic.textContent = "檔";
+          chip.appendChild(ic);
+        }
+        var nm = document.createElement("span");
+        nm.className = "fchip-nm"; nm.textContent = f.name;
+        chip.appendChild(nm);
+        info.appendChild(chip);
+      });
+      var clr = document.createElement("button");
+      clr.type = "button"; clr.className = "linklike"; clr.textContent = "清除全部";
+      clr.onclick = clearFiles;
+      info.appendChild(clr);
+      if (sendBtn) sendBtn.classList.add("ready");  // 有附件就讓送出鈕更醒目
+    }
+    function clearFiles() { if (imgInput) imgInput.value = ""; if (docInput) docInput.value = ""; renderFiles(); }
+    if (imgInput) imgInput.addEventListener("change", renderFiles);
+    if (docInput) docInput.addEventListener("change", renderFiles);
+    // 桌機：Enter 送出、Shift+Enter 換行
+    document.getElementById("cbody").addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey && window.innerWidth > 600) {
+        e.preventDefault(); this.form.submit();
+      }
+    });
+
+    function copyMsg(id, btn) {
+      var text = document.getElementById(id).innerText;
+      var done = function () { var o = btn.textContent; btn.textContent = "已複製"; setTimeout(function(){ btn.textContent = o; }, 1500); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, function () { fb(text, done); });
+      } else { fb(text, done); }
+    }
+    function fb(text, done) {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  </script>
+{% endblock %}
