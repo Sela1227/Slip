@@ -5,12 +5,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ app_name }}{% endblock %}</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon/sela.svg">
-  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
-  <link rel="manifest" href="/static/favicon/site.webmanifest">
-  <meta name="theme-color" content="#304073">
+  <link rel="icon" href="/static/favicon/favicon.ico?v={{ app_version }}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png?v={{ app_version }}">
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png?v={{ app_version }}">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png?v={{ app_version }}">
+  <link rel="manifest" href="/static/favicon/site.webmanifest?v={{ app_version }}">
+  <meta name="theme-color" content="#547A91">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -21,7 +21,7 @@
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <span class="brand"><img src="/static/favicon/sela.svg" alt="SELA">{{ app_name }}<span class="ver">{{ app_version }}</span></span>
+      <span class="brand"><img src="/static/app-logo/app-logo-64.png?v={{ app_version }}" alt="Slip">{{ app_name }}<span class="ver">{{ app_version }}</span></span>
       <div class="topbar-right">
         <div class="cap" title="全站共用空間（所有帳號＋附件總和）">
           總空間 {{ capacity.used_mb }} / {{ capacity.limit_mb }} MB

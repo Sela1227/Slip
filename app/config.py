@@ -6,7 +6,7 @@
 """
 import os
 
-VERSION = "V1.11.0"
+VERSION = "V1.12.0"
 # 顯示用時區（資料庫存 UTC）
 APP_TZ = os.environ.get("APP_TZ", "Asia/Taipei")
 

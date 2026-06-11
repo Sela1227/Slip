@@ -1,6 +1,6 @@
 // Slip 絲利普 service worker
 // 重要：/static 採「網路優先」，避免部署後拿到舊的 style.css（快取優先會卡住更新）。
-const CACHE = "slip-static-v3";
+const CACHE = "slip-static-v4";
 const ASSETS = [
   "/static/style.css",
   "/static/favicon/sela.svg",

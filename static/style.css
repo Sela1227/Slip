@@ -663,3 +663,9 @@ details.selfnote[open] > summary .selfnote-edit { opacity: .5; }
 .announce span { white-space: pre-wrap; word-break: break-word; }
 /* 帳號管理：最後登入 */
 .acct-login { color: var(--muted); font-size: 12px; }
+
+/* SELA 品牌歸屬印記（app logo 為主視覺、SELA logo 退為 footer/about 角標）*/
+.sela-attrib { display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin: 28px auto 4px; opacity: .55; font-size: 12px; color: var(--muted); }
+.sela-attrib img { width: 18px; height: 18px; display: block; }
+.login-card .sela-attrib, .foot.sela-attrib { margin-top: 20px; }

@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="assets/sela.svg" width="120" alt="SELA"/>
+  <img src="static/app-logo/app-logo-256.png" width="120" alt="Slip"/>
   <h1>Slip 絲利普</h1>
   <p>小型用戶間的訊息工具——核心是讓每個帳號方便在不同裝置間傳訊息給自己，也能和好友互傳</p>
-  <p><strong>V1.11.0</strong></p>
+  <p><strong>V1.12.0</strong></p>
 </div>
 
 ---
@@ -112,8 +112,15 @@ python run.py
 
 ## 版本
 
-V1.11.0
+V1.12.0
 
 ---
 
-> Made by **SELA** · V1.11.0
+> Made by **SELA** · V1.12.0
+
+---
+
+<div align="center">
+  <img src="static/favicon/sela.svg" width="20" alt="SELA"/>
+  <sub>App logo：Slip 自有視覺（北歐藍紙條 S）　·　品牌歸屬 Made by SELA</sub>
+</div>

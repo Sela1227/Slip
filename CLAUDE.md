@@ -8,7 +8,7 @@
 
 ## 〇、當前狀態
 
-- **版本：** V1.11.0
+- **版本：** V1.12.0
 - **狀態：** 可運作，煙霧測試全綠；Railway build 問題已解（坑 #1），尚未正式上線
 - **一句話定位：** 診間用的「傳給自己 / 傳給同事」交接工具，多帳號、共用電腦友善、訊息 7 天自動清除，部署在 Railway。英文名 Slip，畫面顯示「Slip 診間傳遞」
 - **技術棧：** Python 3.12 + FastAPI 0.115 + SQLAlchemy 2.0 + PostgreSQL（Railway）+ Jinja2 SSR
@@ -162,6 +162,7 @@ timeout 6 python run.py
 
 | 版本 | 重點 |
 |------|------|
+| V1.12.0 | App logo 落地（依 Kit V1.14.1 §8-12 雙軌系統）：SELA 委託 Gemini 生圖（北歐藍 #547A91 圓角方框＋白色 S 紙條＋SLIP 字樣）→ Claude 去浮水印（鏡像乾淨左下角覆蓋右下角 Gemini 星號）＋ Pillow 生全套：static/app-logo/app-logo-{16..1024}.png（透明外緣，四角 floodfill）＋覆蓋 static/favicon/（favicon.ico 多尺寸/16/32 透明、apple-touch/android-chrome 實心藍底避免 iOS 透明變黑）。base.html favicon＋品牌列改 app logo（帶 ?v=app_version 破快取）、theme-color→#547A91；site.webmanifest theme_color→#547A91。SELA logo 降為品牌歸屬印記：login footer＋個人設定底部 .sela-attrib 小角標。SW 快取升 v4。另已產 SELA-logo-prompt.md（§17 工作流）|
 | V1.11.0 | 七項：(1) 公告：新 Announcement 表＋`/admin/announce` 設/清（清空 active 後存新 active）；base_ctx 帶最新 active 公告，base.html 全頁頂橫幅 .announce (2) 對話顯示優化：泡泡與時間/動作分離——thread 包 `.bubble-col`，`.bubble-meta` 移到 .bubble 外（時間/已讀/收藏/更多在泡泡下方），meta 改 muted 深色、me 側覆蓋原綠底白字色，chat gap 加大 16px (3) 修邀請註冊失效：成因是舊 signups 表缺 expires_at/used_at/used_by，_ensure_columns 沒列到→補上 ALTER (4) 帳號管理顯示最後登入：User.last_login（_ensure_columns 補欄）；login/activate/signup 皆寫入；admin 顯示 last_logins（localtime 格式化）(5) 剪貼簿強化：每格加「清空」＋「全部清空」(JS clearSlot/clearAllSlots) (6) 瀏覽器存密碼＝瀏覽器密碼管理員，非 App 儲存（App 只存 bcrypt 雜湊）；屬說明 (7) 網頁書籤：新 Bookmark 表（username/label/url/sort_order）＋常用功能「書籤」分頁＋`/bookmark/add|/{id}/delete`，_safe_url 擋非 http(s)。新增 announcements、bookmarks 表（自動建）|
 | V1.10.2 | 貼圖缺「貼圖感」：圖仍包在綠色泡泡裡。原因＝`.bubble-row.me/.them .bubble` 綠底 specificity(0,3,0) 蓋過 `.bubble.sticker`(0,2,0)。修法：改用同等具體並排後的 `.bubble-row.me/.them .bubble.sticker` 設 transparent/no-border/no-shadow/padding0、文字色改回 var(--ink)，meta 改深色可讀；貼圖放大到 160px。現在貼圖浮在背景上、無泡泡，符合 LINE 風 |
 | V1.10.1 | 修貼圖爆框：症狀是貼圖以原圖尺寸顯示、泡泡底色還在 → 其實是舊 CSS 快取（自 V1.10.1 起 style.css 連結帶 ?v=app_version 自動破快取；早期 V1.10.0 的 .sticker-img/.bubble.sticker 沒載到）。根本修法：base.html 的 style.css 連結改帶 `?v={{ app_version }}`，每次改版自動破瀏覽器快取；sw.js CACHE 升 v3。日後任何 CSS 改動都會隨版本自動更新，不必再手動 hard-refresh |
@@ -313,6 +314,8 @@ timeout 6 python run.py
 ## 九、一句話總結
 
 V1.9.1：PDF 密碼欄加眼睛顯示切換。
+
+V1.12.0：Slip 有了自己的 app logo（北歐藍 S 紙條），favicon／品牌列改用之，SELA logo 退為角標；依 Kit 雙軌系統。
 
 V1.11.0：公告、對話時間移出泡泡、修邀請註冊（舊 signups 缺欄）、最後登入時間、剪貼簿清空鍵、網頁書籤。
 
